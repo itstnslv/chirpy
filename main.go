@@ -1,15 +1,19 @@
 package main
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 func main() {
-	serveMux := http.NewServeMux()
+	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(http.Dir(".")))
+
 	server := &http.Server{
-		Handler: serveMux,
+		Handler: mux,
 		Addr:    ":8080",
 	}
-	err := server.ListenAndServe()
-	if err != nil {
-		return
-	}
+
+	log.Printf("Listening on port %s", server.Addr)
+	log.Fatal(server.ListenAndServe())
 }
