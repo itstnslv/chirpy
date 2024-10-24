@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/itstnslv/chirpy/internal/database"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -9,11 +11,19 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
+	"time"
 )
 
 type apiConfig struct {
 	fileServerHits atomic.Int32
 	db             *database.Queries
+}
+
+type User struct {
+	Id        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
 }
 
 func main() {
@@ -37,6 +47,33 @@ func main() {
 	mux.Handle("/app/", fsHandler)
 	mux.HandleFunc("GET /api/healthz", handlerReadiness)
 	mux.HandleFunc("POST /api/validate_chirp", handlerChirpsValidation)
+
+	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+		type parameters struct {
+			Email string `json:"email"`
+		}
+
+		decoder := json.NewDecoder(r.Body)
+		params := parameters{}
+		err := decoder.Decode(&params)
+		if err != nil {
+			respondWithErr(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
+			return
+		}
+
+		user, err := apiCfg.db.CreateUser(r.Context(), params.Email)
+		if err != nil {
+			respondWithErr(w, http.StatusInternalServerError, "Couldn't create user", err)
+			return
+		}
+		respondWithJSON(w, http.StatusCreated, User{
+			user.ID,
+			user.CreatedAt,
+			user.UpdatedAt,
+			user.Email,
+		})
+	})
+
 	mux.HandleFunc("GET /admin/metrics", apiCfg.handleMetrics)
 	mux.HandleFunc("POST /admin/reset", apiCfg.handleReset)
 
