@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"github.com/google/uuid"
+	"github.com/itstnslv/chirpy/internal/auth"
+	"github.com/itstnslv/chirpy/internal/database"
 	"net/http"
 	"time"
 )
@@ -14,14 +16,12 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
-	type parameters struct {
-		Email string `json:"email"`
-	}
-	type response struct {
-		User
-	}
+type parameters struct {
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
 
+func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
 	err := decoder.Decode(&params)
@@ -30,17 +30,24 @@ func (cfg *apiConfig) createUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	user, err := cfg.db.CreateUser(r.Context(), params.Email)
+	hashedPassword, err := auth.HashPassword(params.Password)
+	if err != nil {
+		respondWithErr(w, http.StatusInternalServerError, "Couldn't hash password", err)
+	}
+	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{
+		Email:          params.Email,
+		HashedPassword: hashedPassword,
+	})
 	if err != nil {
 		respondWithErr(w, http.StatusInternalServerError, "Couldn't create user", err)
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, response{
+	respondWithJSON(w, http.StatusCreated,
 		User{
 			user.ID,
 			user.CreatedAt,
 			user.UpdatedAt,
 			user.Email,
 		},
-	})
+	)
 }
