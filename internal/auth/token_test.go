@@ -9,11 +9,11 @@ import (
 )
 
 func TestValidateJWT(t *testing.T) {
-	randomUUID := uuid.New()
+	userId := uuid.New()
 	tokenSecret := "tokenSecret"
-	tokenDuration := 2 * time.Second
-	token, _ := MakeJWT(randomUUID, tokenSecret, tokenDuration)
-	expiredToken, _ := MakeJWT(randomUUID, tokenSecret, 1)
+	tokenDuration := time.Hour
+	token, _ := MakeJWT(userId, tokenSecret, tokenDuration)
+	expiredToken, _ := MakeJWT(userId, tokenSecret, 1)
 	type args struct {
 		tokenString string
 		tokenSecret string
@@ -30,8 +30,17 @@ func TestValidateJWT(t *testing.T) {
 				token,
 				tokenSecret,
 			},
-			randomUUID,
+			userId,
 			false,
+		},
+		{
+			"Invalid token",
+			args{
+				"token.invalid.string",
+				tokenSecret,
+			},
+			uuid.Nil,
+			true,
 		},
 		{
 			"Invalid secret",
@@ -67,40 +76,30 @@ func TestValidateJWT(t *testing.T) {
 }
 
 func TestGetBearerToken(t *testing.T) {
-	token := "ajfbdslkgbjrbegoernbvijsdfnvkjdfnsvkjdfsnv"
-	testHeaders := http.Header{}
-	testHeaders.Add("Authorization", "Bearer "+token)
-	falseHeaders := http.Header{}
-	falseHeaders.Add("Authorization", "Bearer ")
-	type args struct {
-		headers http.Header
-	}
 	tests := []struct {
 		name    string
-		args    args
+		headers http.Header
 		want    string
 		wantErr bool
 	}{
 		{
 			"valid token",
-			args{
-				headers: testHeaders,
+			http.Header{
+				"Authorization": []string{"Bearer valid_token"},
 			},
-			token,
+			"valid_token",
 			false,
 		},
 		{
 			"no header",
-			args{
-				headers: nil,
-			},
+			http.Header{},
 			"",
 			true,
 		},
 		{
-			"no token",
-			args{
-				headers: falseHeaders,
+			"malformed header",
+			http.Header{
+				"Authorization": []string{"InvalidBearer invalid_token"},
 			},
 			"",
 			true,
@@ -108,7 +107,7 @@ func TestGetBearerToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetBearerToken(tt.args.headers)
+			got, err := GetBearerToken(tt.headers)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBearerToken() error = %v, wantErr %v", err, tt.wantErr)
 				return

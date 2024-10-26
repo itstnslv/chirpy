@@ -15,6 +15,7 @@ type apiConfig struct {
 	fileServerHits atomic.Int32
 	db             *database.Queries
 	platform       string
+	secret         string
 }
 
 func main() {
@@ -27,11 +28,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error connecting to database: %s", err)
 	}
+	tokenSecret := os.Getenv("secret")
+	if tokenSecret == "" {
+		log.Fatal("secret environment variable not set")
+	}
 
 	apiCfg := apiConfig{
 		fileServerHits: atomic.Int32{},
 		db:             database.New(dbConn),
 		platform:       os.Getenv("PLATFORM"),
+		secret:         tokenSecret,
 	}
 
 	mux := http.NewServeMux()

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/google/uuid"
+	"github.com/itstnslv/chirpy/internal/auth"
 	"github.com/itstnslv/chirpy/internal/database"
 	"net/http"
 	"strings"
@@ -20,13 +21,23 @@ type Chirp struct {
 
 func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserId uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithErr(w, http.StatusUnauthorized, "Auth token isn't provided!", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(token, cfg.secret)
+	if err != nil {
+		respondWithErr(w, http.StatusUnauthorized, "Auth token isn't valid!", err)
+		return
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithErr(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
@@ -40,7 +51,7 @@ func (cfg *apiConfig) createChirpHandler(w http.ResponseWriter, r *http.Request)
 
 	created, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   cleaned,
-		UserID: params.UserId,
+		UserID: userID,
 	})
 	if err != nil {
 		respondWithErr(w, http.StatusInternalServerError, "Couldn't create Chirp", err)
