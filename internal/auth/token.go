@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
@@ -65,4 +67,13 @@ func GetBearerToken(headers http.Header) (string, error) {
 		return "", errors.New("malformed auth header")
 	}
 	return strings.TrimSpace(splitAuth[1]), nil
+}
+
+func MakeRefreshToken() (string, error) {
+	randomBytes := make([]byte, 32)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+	return hex.EncodeToString(randomBytes), nil
 }
