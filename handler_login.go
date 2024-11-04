@@ -15,7 +15,7 @@ func (cfg *apiConfig) loginUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	type loginResponse struct {
 		User
-		Token        string `json:"accessToken"`
+		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
