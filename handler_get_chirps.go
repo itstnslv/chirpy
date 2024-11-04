@@ -9,9 +9,20 @@ import (
 )
 
 func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
+	authorId := r.URL.Query().Get("author_id")
+	if authorId != "" {
+		userID, _ := uuid.Parse(authorId)
+		chirpsByAuthor, err := cfg.db.ListChirpsByAuthor(r.Context(), userID)
+		processDbChirps(w, chirpsByAuthor, err)
+		return
+	}
 	dbChirps, err := cfg.db.ListChirps(r.Context())
+	processDbChirps(w, dbChirps, err)
+}
+
+func processDbChirps(w http.ResponseWriter, dbChirps []database.Chirp, err error) {
 	if err != nil {
-		respondWithErr(w, http.StatusInternalServerError, "Couldn't retrieve chirps", err)
+		respondWithErr(w, http.StatusInternalServerError, "couldn't retrieve chirps", err)
 		return
 	}
 	var chirpsJson []Chirp
