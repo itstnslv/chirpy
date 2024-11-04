@@ -16,6 +16,7 @@ type apiConfig struct {
 	db             *database.Queries
 	platform       string
 	secret         string
+	polkaKey       string
 }
 
 func main() {
@@ -32,12 +33,17 @@ func main() {
 	if tokenSecret == "" {
 		log.Fatal("secret environment variable not set")
 	}
+	polkaApiKey := os.Getenv("POLKA_KEY")
+	if polkaApiKey == "" {
+		log.Fatal("polka_key environment variable not set")
+	}
 
 	apiCfg := apiConfig{
 		fileServerHits: atomic.Int32{},
 		db:             database.New(dbConn),
 		platform:       os.Getenv("PLATFORM"),
 		secret:         tokenSecret,
+		polkaKey:       polkaApiKey,
 	}
 
 	mux := http.NewServeMux()
