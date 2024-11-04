@@ -10,13 +10,17 @@ import (
 
 func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	authorId := r.URL.Query().Get("author_id")
+	sortOrder := r.URL.Query().Get("sort")
 	if authorId != "" {
 		userID, _ := uuid.Parse(authorId)
-		chirpsByAuthor, err := cfg.db.ListChirpsByAuthor(r.Context(), userID)
+		chirpsByAuthor, err := cfg.db.ListSortedChirpsByAuthorId(r.Context(), database.ListSortedChirpsByAuthorIdParams{
+			UserID:  userID,
+			Column2: sortOrder,
+		})
 		processDbChirps(w, chirpsByAuthor, err)
 		return
 	}
-	dbChirps, err := cfg.db.ListChirps(r.Context())
+	dbChirps, err := cfg.db.ListSortedChirps(r.Context(), sortOrder)
 	processDbChirps(w, dbChirps, err)
 }
 

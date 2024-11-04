@@ -67,14 +67,16 @@ func (q *Queries) GetChirpById(ctx context.Context, id uuid.UUID) (Chirp, error)
 	return i, err
 }
 
-const listChirps = `-- name: ListChirps :many
+const listSortedChirps = `-- name: ListSortedChirps :many
 SELECT id, created_at, updated_at, body, user_id
 FROM chirps
-ORDER BY created_at
+ORDER BY
+    CASE WHEN $1 = 'desc' THEN created_at END DESC,
+    CASE WHEN $1 IS NULL OR $1 != 'desc' THEN created_at END
 `
 
-func (q *Queries) ListChirps(ctx context.Context) ([]Chirp, error) {
-	rows, err := q.db.QueryContext(ctx, listChirps)
+func (q *Queries) ListSortedChirps(ctx context.Context, dollar_1 interface{}) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, listSortedChirps, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -102,15 +104,22 @@ func (q *Queries) ListChirps(ctx context.Context) ([]Chirp, error) {
 	return items, nil
 }
 
-const listChirpsByAuthor = `-- name: ListChirpsByAuthor :many
+const listSortedChirpsByAuthorId = `-- name: ListSortedChirpsByAuthorId :many
 SELECT id, created_at, updated_at, body, user_id
 FROM chirps
 WHERE user_id = $1
-ORDER BY created_at
+ORDER BY
+    CASE WHEN $2 = 'desc' THEN created_at END DESC,
+    CASE WHEN $2 IS NULL OR $2 != 'desc' THEN created_at END
 `
 
-func (q *Queries) ListChirpsByAuthor(ctx context.Context, userID uuid.UUID) ([]Chirp, error) {
-	rows, err := q.db.QueryContext(ctx, listChirpsByAuthor, userID)
+type ListSortedChirpsByAuthorIdParams struct {
+	UserID  uuid.UUID
+	Column2 interface{}
+}
+
+func (q *Queries) ListSortedChirpsByAuthorId(ctx context.Context, arg ListSortedChirpsByAuthorIdParams) ([]Chirp, error) {
+	rows, err := q.db.QueryContext(ctx, listSortedChirpsByAuthorId, arg.UserID, arg.Column2)
 	if err != nil {
 		return nil, err
 	}

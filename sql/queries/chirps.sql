@@ -6,16 +6,20 @@ VALUES (gen_random_uuid(),
         $1,
         $2) RETURNING *;
 
--- name: ListChirps :many
+-- name: ListSortedChirps :many
 SELECT id, created_at, updated_at, body, user_id
 FROM chirps
-ORDER BY created_at;
+ORDER BY
+    CASE WHEN $1 = 'desc' THEN created_at END DESC,
+    CASE WHEN $1 IS NULL OR $1 != 'desc' THEN created_at END;
 
--- name: ListChirpsByAuthor :many
+-- name: ListSortedChirpsByAuthorId :many
 SELECT id, created_at, updated_at, body, user_id
 FROM chirps
 WHERE user_id = $1
-ORDER BY created_at;
+ORDER BY
+    CASE WHEN $2 = 'desc' THEN created_at END DESC,
+    CASE WHEN $2 IS NULL OR $2 != 'desc' THEN created_at END;
 
 -- name: GetChirpById :one
 SELECT *
